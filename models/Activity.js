@@ -1,32 +1,49 @@
-const mongoose = require("mongoose");
+const db = require('../config/db')
+const { User, Post } = require('./User')
+const { Model, DataTypes } = require('sequelize')
 
-const ActivitySchema = new mongoose.Schema({
+// NOTE: Sequelize automatically adds the fields
+// `createdAt` and `updatedAt` to every model
+class Activity extends Model {}
 
-    sender : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'User'
+Activity.init(
+    {
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        },
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isIn: [['request', 'donate']],
+            },
+        },
+        status: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            validate: {
+                isIn: [
+                    [
+                        'pending',
+                        'accepted',
+                        'declined',
+                        'completed',
+                        'cancelled',
+                    ],
+                ],
+            },
+            defaultValue: 'pending',
+        },
     },
-    receiver : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'User'
-    },
-    status : {
-        type : String,
-        enum : ['Pending','Accepted','Declined','Completed','Cancelled'],
-        default : 'Pending'
-    },
-    type : {
-        type : String,
-        enum : ['Donate','Request']
-    },
-    postId : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'Post'
-    }
+    { db, modelName: 'activity' }
+)
 
+User.hasMany(Activity)
+Activity.belongsTo(User, { foreignKey: 'senderId', onDelete: 'CASCADE' })
+Activity.belongsTo(User, { foreignKey: 'receiverId', onDelete: 'CASCADE' })
 
-},{timestamps:true})
-
-const Activity = mongoose.model('Activity',ActivitySchema)
+Post.hasMany(Activity)
+Activity.belongsTo(Post, { onDelete: 'CASCADE' })
 
 module.exports = Activity
